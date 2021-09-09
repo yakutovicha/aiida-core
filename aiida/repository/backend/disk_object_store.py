@@ -38,7 +38,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
         :param kwargs: parameters for the initialisation.
         """
-        self.container.init_container(**kwargs)
+        with self.container as container:
+            container.init_container(**kwargs)
 
     @property
     def is_initialised(self) -> bool:
@@ -63,7 +64,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        return self.container.add_object(handle.read())
+        with self.container as container:
+            return container.add_object(handle.read())
 
     def has_object(self, key: str) -> bool:
         """Return whether the repository has an object with the given key.
@@ -71,7 +73,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param key: fully qualified identifier for the object within the repository.
         :return: True if the object exists, False otherwise.
         """
-        return self.container.has_object(key)
+        with self.container as container:
+            return container.has_object(key)
 
     @contextlib.contextmanager
     def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
@@ -87,8 +90,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         super().open(key)
 
-        with self.container.get_object_stream(key) as handle:
-            yield handle  # type: ignore[misc]
+        with self.container as container:
+            with container.get_object_stream(key) as handle:
+                yield handle  # type: ignore[misc]
 
     def delete_object(self, key: str):
         """Delete the object from the repository.
@@ -98,7 +102,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :raise OSError: if the file could not be deleted.
         """
         super().delete_object(key)
-        self.container.delete_objects([key])
+        with self.container as container:
+            container.delete_objects([key])
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.
